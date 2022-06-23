@@ -8,22 +8,20 @@ dataSources:
     source:
       address: "0x8f9E8e833A69Aa467E42c46cCA640da84DD4585f"
       abi: NFTChampions
+      startBlock: 20661573
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.5
       language: wasm/assemblyscript
       entities:
-        - Approval
-        - OwnershipTransferred
-        - Transfer
+        - Transaction
+        - Wallet
+        - HoldersCounter
+        - DailyHoldersCounter
       abis:
         - name: NFTChampions
           file: ./abis/NFTChampions.json
       eventHandlers:
-        - event: Approval(indexed address,indexed address,uint256)
-          handler: handleApproval
-        - event: OwnershipTransferred(indexed address,indexed address)
-          handler: handleOwnershipTransferred
         - event: Transfer(indexed address,indexed address,uint256)
           handler: handleTransfer
       file: ./src/nft-champions.ts

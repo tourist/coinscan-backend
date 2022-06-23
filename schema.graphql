@@ -1,6 +1,26 @@
-type ExampleEntity @entity {
+type Transaction @entity {
   id: ID!
-  count: BigInt!
-  owner: Bytes! # address
-  spender: Bytes! # address
+  txn: String!
+  from: String!
+  to: String!
+  value: BigInt!
+  timestamp: BigInt!
+}
+
+type Wallet @entity {
+  id: ID!
+  address: String!
+  value: BigInt!
+}
+
+type HoldersCounter @entity {
+  id: ID!
+  count: Int!
+}
+
+type DailyHoldersState @entity {
+  id: ID!
+  start: BigInt!
+  end: BigInt!
+  count: Int!
 }
