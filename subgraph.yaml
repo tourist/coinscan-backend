@@ -16,6 +16,7 @@ dataSources:
       entities:
         - Transaction
         - Wallet
+        - WalletTransaction
         - HoldersCounter
         - DailyHoldersCounter
       abis:
