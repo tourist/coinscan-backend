@@ -12,6 +12,7 @@ type Wallet @entity {
   id: ID!
   address: String!
   value: BigInt!
+  dailyStates: [DailyWalletState!]! @derivedFrom(field: "wallet")
   transactions: [WalletTransaction!]! @derivedFrom(field: "wallet")
 }
 
