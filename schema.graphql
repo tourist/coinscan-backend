@@ -1,16 +1,26 @@
 type Transaction @entity {
   id: ID!
   txn: String!
-  from: String!
-  to: String!
+  from: Wallet!
+  to: Wallet!
   value: BigInt!
   timestamp: BigInt!
+  wallets: [WalletTransaction!]! @derivedFrom(field: "transaction")
 }
 
 type Wallet @entity {
   id: ID!
   address: String!
   value: BigInt!
+  transactions: [WalletTransaction!]! @derivedFrom(field: "wallet")
+}
+
+type WalletTransaction @entity {
+  id: ID!
+  wallet: Wallet!
+  transaction: Transaction!
+  value: BigInt!
+  timestamp: BigInt!
 }
 
 type HoldersCounter @entity {
@@ -23,4 +33,14 @@ type DailyHoldersState @entity {
   start: BigInt!
   end: BigInt!
   count: Int!
+}
+
+type DailyWalletState @entity {
+  id: ID!
+  wallet: Wallet!
+  start: BigInt!
+  end: BigInt!
+  inflow: BigInt!
+  outflow: BigInt!
+  volume: BigInt!
 }
