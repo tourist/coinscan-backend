@@ -35,14 +35,29 @@ function getTransferOperationType(address: Address, event: Transfer): string {
 }
 
 function updateDailyWalletState(event: Transfer, wallet: Wallet): void {
-  const toAddress = event.transaction.to;
-  const fromAddress = event.transaction.from;
+  const toAddress = event.params.to;
+  const fromAddress = event.params.from;
 
   let openTime = getDayOpenTime(event.block.timestamp);
   let endTime = getDayCloseTime(event.block.timestamp);
 
-  const id = wallet.address + openTime.toString();
+  const id = wallet.address + "-" + openTime.toString();
   let dailyWalletState = DailyWalletState.load(id);
+
+  log.info(
+    "updating daily wallet state: id {} toWallet {} fromAddress {} wallet.address {} transaction value {} to address match {} from address match {}",
+    [
+      id,
+      toAddress ? toAddress.toHexString() : "",
+      fromAddress ? fromAddress.toHexString() : "",
+      wallet.address,
+      event.params.value.toHexString(),
+      toAddress && toAddress.toHexString() == wallet.address ? "true" : "false",
+      fromAddress && fromAddress.toHexString() == wallet.address
+        ? "true"
+        : "false",
+    ]
+  );
 
   if (dailyWalletState === null) {
     dailyWalletState = new DailyWalletState(id);
@@ -50,28 +65,20 @@ function updateDailyWalletState(event: Transfer, wallet: Wallet): void {
     dailyWalletState.end = endTime;
     dailyWalletState.wallet = wallet.id;
     dailyWalletState.inflow =
-      toAddress && toAddress.toHexString() === wallet.address
-        ? event.transaction.value
-        : zero;
-
+      toAddress.toHexString() == wallet.address ? event.params.value : zero;
     dailyWalletState.outflow =
-      event.transaction.from.toHexString() === wallet.address
-        ? event.transaction.value
-        : zero;
-    dailyWalletState.volume = event.transaction.value;
+      fromAddress.toHexString() == wallet.address ? event.params.value : zero;
+    dailyWalletState.volume = event.params.value;
   } else {
     dailyWalletState.inflow =
-      fromAddress && fromAddress.toHexString() === wallet.address
-        ? event.transaction.value
-        : zero;
-
+      toAddress.toHexString() == wallet.address
+        ? dailyWalletState.inflow.plus(event.params.value)
+        : dailyWalletState.inflow;
     dailyWalletState.outflow =
-      event.transaction.from.toHexString() === wallet.address
-        ? dailyWalletState.outflow.plus(event.transaction.value)
+      fromAddress.toHexString() == wallet.address
+        ? dailyWalletState.outflow.plus(event.params.value)
         : dailyWalletState.outflow;
-    dailyWalletState.volume = dailyWalletState.volume.plus(
-      event.transaction.value
-    );
+    dailyWalletState.volume = dailyWalletState.volume.plus(event.params.value);
   }
   dailyWalletState.save();
 }
@@ -171,14 +178,14 @@ function createOrUpdateWallet(address: Address, event: Transfer): Wallet {
   return wallet;
 }
 
-function createOrUpdateWalletTransaction(
+function createWalletTransaction(
   event: Transfer,
   wallet: Wallet,
   transaction: Transaction,
   idSuffix: string
 ): WalletTransaction {
   let walletTransaction = new WalletTransaction(
-    event.transaction.hash.toHex() + "-" + idSuffix
+    wallet.id + "-" + event.transaction.hash.toHex() + "-" + idSuffix
   );
   walletTransaction.wallet = wallet.id;
   walletTransaction.transaction = transaction.id;
@@ -198,6 +205,7 @@ export function handleTransfer(event: Transfer): void {
   let transaction = new Transaction(
     event.transaction.hash.toHex() + "-" + event.logIndex.toString()
   );
+
   transaction.from = event.params.from.toHex();
   transaction.to = event.params.to.toHex();
   transaction.txn = event.transaction.hash.toHex();
@@ -208,6 +216,6 @@ export function handleTransfer(event: Transfer): void {
   // update wallets taking part in transfer
   const walletTo = createOrUpdateWallet(event.params.to, event);
   const walletFrom = createOrUpdateWallet(event.params.from, event);
-  createOrUpdateWalletTransaction(event, walletTo, transaction, "to");
-  createOrUpdateWalletTransaction(event, walletFrom, transaction, "from");
+  createWalletTransaction(event, walletTo, transaction, "to");
+  createWalletTransaction(event, walletFrom, transaction, "from");
 }
