@@ -8,26 +8,21 @@ import {
   DailyWalletState,
   DailyHoldersState,
 } from "../generated/schema";
-import { zero, getDayOpenTime, getDayCloseTime } from "./utils";
+import { zero, zeroAddress, getDayOpenTime, getDayCloseTime } from "./utils";
 
 const PLUS = "PLUS";
 const MINUS = "MINUS";
-const UNKNOWN = "UNKNOWN";
 const HOLDERS_COUNTER = "HOLDERS_COUNTER";
 
 function getTransferOperationType(address: Address, event: Transfer): string {
   log.info(
     "operation check fired with address: {} event.params.from: {} event.params.to {}",
-    [
-      address.toHex(),
-      event.params.from.toHexString(),
-      event.params.to.toHexString(),
-    ]
+    [address.toHex(), event.params.from.toHex(), event.params.to.toHex()]
   );
-  if (event.params.from.toHexString() == address.toHexString()) {
+  if (event.params.from.toHex() == address.toHex()) {
     return MINUS;
   }
-  if (event.params.to.toHexString() == address.toHexString()) {
+  if (event.params.to.toHex() == address.toHex()) {
     return PLUS;
   }
 
@@ -48,14 +43,12 @@ function updateDailyWalletState(event: Transfer, wallet: Wallet): void {
     "updating daily wallet state: id {} toWallet {} fromAddress {} wallet.address {} transaction value {} to address match {} from address match {}",
     [
       id,
-      toAddress ? toAddress.toHexString() : "",
-      fromAddress ? fromAddress.toHexString() : "",
+      toAddress ? toAddress.toHex() : "",
+      fromAddress ? fromAddress.toHex() : "",
       wallet.address,
-      event.params.value.toHexString(),
-      toAddress && toAddress.toHexString() == wallet.address ? "true" : "false",
-      fromAddress && fromAddress.toHexString() == wallet.address
-        ? "true"
-        : "false",
+      event.params.value.toHex(),
+      toAddress && toAddress.toHex() == wallet.address ? "true" : "false",
+      fromAddress && fromAddress.toHex() == wallet.address ? "true" : "false",
     ]
   );
 
@@ -65,17 +58,17 @@ function updateDailyWalletState(event: Transfer, wallet: Wallet): void {
     dailyWalletState.end = endTime;
     dailyWalletState.wallet = wallet.id;
     dailyWalletState.inflow =
-      toAddress.toHexString() == wallet.address ? event.params.value : zero;
+      toAddress.toHex() == wallet.address ? event.params.value : zero;
     dailyWalletState.outflow =
-      fromAddress.toHexString() == wallet.address ? event.params.value : zero;
+      fromAddress.toHex() == wallet.address ? event.params.value : zero;
     dailyWalletState.volume = event.params.value;
   } else {
     dailyWalletState.inflow =
-      toAddress.toHexString() == wallet.address
+      toAddress.toHex() == wallet.address
         ? dailyWalletState.inflow.plus(event.params.value)
         : dailyWalletState.inflow;
     dailyWalletState.outflow =
-      fromAddress.toHexString() == wallet.address
+      fromAddress.toHex() == wallet.address
         ? dailyWalletState.outflow.plus(event.params.value)
         : dailyWalletState.outflow;
     dailyWalletState.volume = dailyWalletState.volume.plus(event.params.value);
@@ -144,28 +137,36 @@ function updateDailyHodlersState(
 }
 
 function createOrUpdateWallet(address: Address, event: Transfer): Wallet {
-  let operation = getTransferOperationType(address, event);
+  const hexAddress = address.toHex();
+  const operation = getTransferOperationType(address, event);
   log.info("detected operation {}", [operation]);
-  // let contract = NFTChampions.bind(event.address);
-  let wallet = Wallet.load(address.toHex());
+  let wallet = Wallet.load(hexAddress);
   let initialValue = zero;
 
   // create or update wallet
   if (wallet === null) {
-    log.info("creating wallet {}", [address.toHex()]);
-    wallet = new Wallet(address.toHex());
+    log.info("creating wallet {}", [hexAddress]);
+    wallet = new Wallet(hexAddress);
     log.info("operation {}", [operation.toString()]);
     wallet.address = address.toHex();
-    wallet.value = event.params.value;
-    // wallet.whitelist = contract.whiteList(event.params.to);
+
+    if (hexAddress == zeroAddress && hexAddress == event.params.from.toHex()) {
+      wallet.value = zero;
+    } else {
+      wallet.value = event.params.value;
+    }
   } else {
-    log.info("updating wallet {}", [address.toHex()]);
+    log.info("updating wallet {}", [hexAddress]);
     initialValue = wallet.value;
     log.info("initial wallet value {}", [initialValue.toString()]);
-    wallet.value =
-      operation === PLUS
-        ? wallet.value.plus(event.params.value)
-        : wallet.value.minus(event.params.value);
+    if (hexAddress == zeroAddress && hexAddress == event.params.from.toHex()) {
+      wallet.value = zero;
+    } else {
+      wallet.value =
+        operation === PLUS
+          ? wallet.value.plus(event.params.value)
+          : wallet.value.minus(event.params.value);
+    }
   }
 
   wallet.save();
@@ -216,6 +217,7 @@ export function handleTransfer(event: Transfer): void {
   // update wallets taking part in transfer
   const walletTo = createOrUpdateWallet(event.params.to, event);
   const walletFrom = createOrUpdateWallet(event.params.from, event);
+
   createWalletTransaction(event, walletTo, transaction, "to");
   createWalletTransaction(event, walletFrom, transaction, "from");
 }
