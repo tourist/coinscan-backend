@@ -1,13 +1,13 @@
 {
   "name": "coinscan",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "scripts": {
     "codegen": "graph codegen",
     "build": "graph build",
-    "deploy": "graph deploy --product hosted-service tourist/coinscan",
-    "create-local": "graph create --node http://localhost:8020/ coinscan",
-    "remove-local": "graph remove --node http://localhost:8020/ coinscan",
-    "deploy-local": "graph deploy --node http://localhost:8020/ --ipfs http://localhost:5001 coinscan"
+    "deploy": "graph deploy --product hosted-service tourist/coinscan-champ",
+    "create-local": "graph create --node http://localhost:8020/ coinscan-champ",
+    "remove-local": "graph remove --node http://localhost:8020/ coinscan-champ",
+    "deploy-local": "graph deploy --node http://localhost:8020/ --ipfs http://localhost:5001 coinscan-champ"
   },
   "dependencies": {
     "@graphprotocol/graph-cli": "0.30.4",
